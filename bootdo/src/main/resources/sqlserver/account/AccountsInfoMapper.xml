@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bootdo.sqlserver.account.dao.AccountsInfoDao">
+	<resultMap id="resultMap" type="com.bootdo.sqlserver.account.domain.AccountsInfoDO">
+		<result property="userId" column="UserID" />
+		<result property="gameId" column="GameID" />
+		<result property="accounts" column="Accounts" />
+		<result property="nickName" column="NickName" />
+		<result property="agentLevel" column="AgentLevel" />
+		<result property="loveLiness" column="LoveLiness" />
+		<result property="playingGame" column="PlayingGame" />
+		<result property="registerDate" column="RegisterDate" />
+		<result property="superAgentTime" column="SuperAgentTime" />
+		<result property="insureScore" column="InsureScore" />
+	</resultMap>
+
+	<select id="get" resultMap="resultMap">
+		select *from QPAccountsDB.dbo.AccountsInfo
+		<where>
+			<foreach collection="params" index="key" item="value">
+				<if test="value != null">
+					and ${key} = #{value}
+				</if>
+			</foreach>
+		</where>
+	</select>
+
+	<select id="list" resultMap="resultMap">
+		<!--select * from QPAccountsDB.dbo.AccountsInfo-->
+		SELECT top ${limit} *
+		from QPAccountsDB.dbo.AccountsInfo
+		where
+		UserID not in (
+		select top ${offset} UserID from QPAccountsDB.dbo.AccountsInfo
+		)
+		order by RegisterDate
+	</select>
+
+	<select id="count" resultType="int">
+		select count(*) from QPAccountsDB.dbo.AccountsInfo
+	</select>
+
+	<update id="update" parameterType="com.bootdo.sqlserver.account.domain.AccountsInfoDO">
+		update AccountsInfo
+		<set>
+			<if test="loveLiness != null">
+				LoveLiness = #{loveLiness}
+			</if>
+		</set>
+		<where>
+			<choose>
+				<when test="userId != null">
+					and UserID = #{userId}
+				</when>
+				<otherwise>
+					and UserID = 0
+				</otherwise>
+			</choose>
+		</where>
+	</update>
+	<select id="getUser" resultMap="resultMap">
+		select UserID,GameID from QPAccountsDB.dbo.AccountsInfo where gameId=#{gameId}
+	</select>
+
+	<select id="queryGiveAgent" resultMap="resultMap">
+		SELECT UserID,GameID,NickName,RegisterDate,LoveLiness FROM QPAccountsDB.dbo.AccountsInfo where LoveLiness=1
+	</select>
+
+	<update id="authorizeGiveAgent" parameterType="com.bootdo.sqlserver.account.domain.AccountsInfoDO">
+		update QPAccountsDB.dbo.AccountsInfo set LoveLiness=0 where GameID=#{gameId}
+	</update>
+
+
+	<select id="giveAgent" resultMap="resultMap">
+		SELECT GameID,NickName,LoveLiness FROM QPAccountsDB.dbo.AccountsInfo where GameID=#{gameId}
+	</select>
+
+	<update id="updateGiveAgent" parameterType="com.bootdo.sqlserver.account.domain.AccountsInfoDO">
+		update QPAccountsDB.dbo.AccountsInfo set LoveLiness=1 where GameID=#{gameId}
+	</update>
+
+	<update id="updateAgentLookCard" parameterType="com.bootdo.sqlserver.account.domain.AccountsInfoDO">
+		UPDATE QPAccountsDB.dbo.AccountsInfo set CustomID=0 where GameID=#{gameId}
+	</update>
+
+	<select id="lookCard" resultMap="resultMap">
+		select UserID,GameID,NickName,CustomID from QPAccountsDB.dbo.AccountsInfo
+		<where>
+			and GameID = #{gameId}
+		</where>
+	</select>
+
+	<update id="updateLook" parameterType="com.bootdo.sqlserver.account.domain.AccountsInfoDO">
+		UPDATE QPAccountsDB.dbo.AccountsInfo set CustomID=1
+		<where>
+			and GameID = #{gameId}
+		</where>
+	</update>
+
+	<select id="queryLook" resultMap="resultMap">
+		select UserID,GameID,NickName,CustomID,RegisterDate from QPAccountsDB.dbo.AccountsInfo where CustomID=1
+	</select>
+
+	<select id="getNewInsert" resultMap="resultMap">
+		SELECT
+		CONVERT (datetime,
+		CONVERT (
+		VARCHAR (10),
+		RegisterDate,
+		120
+		),111) AS registerDate,
+		COUNT (1) AS accounts
+		FROM
+		AccountsInfo
+		<where>
+			<if test="startDate != null">
+		convert(varchar(10), RegisterDate, 120)>= convert(varchar(10),  #{startDate}, 120)
+			</if>
+			<if test="endDate != null">
+		and convert(varchar(10), RegisterDate, 120) &lt;= convert(varchar(10), #{endDate}, 120)
+			</if>
+		</where>
+		GROUP BY
+		CONVERT (
+		VARCHAR (10),
+		RegisterDate,
+		120
+		)
+		ORDER BY RegisterDate DESC
+	</select>
+
+	<select id="getAgentNikeNameAndCrdByGameId" resultMap="resultMap">
+		SELECT
+		a.GameID,
+		a.NickName,
+		b.InsureScore AS PlayingGame
+		FROM
+		QPAccountsDB.dbo.AccountsInfo a
+		LEFT JOIN QPTreasureDB.dbo.GameScoreInfo b ON a.UserID = b.UserID
+		WHERE
+		a.GameId = #{gameId}
+	</select>
+
+</mapper>
+
+
+
+
